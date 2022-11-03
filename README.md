@@ -6,7 +6,7 @@
 
   ## Goals:
 
-  1-renderer (we are using the vulkan API)
+  1-renderer (I'll be using the vulkan API)
 
   2-core
       a-Memory managment
