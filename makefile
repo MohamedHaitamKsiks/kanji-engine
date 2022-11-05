@@ -1,15 +1,17 @@
 CFLAGS = -std=c++17
 LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
+INC_KANJI = -I kanji/
+SOURCES = source/main.cpp kanji/kanji.cpp kanji/renderer/vapp.cpp
 
-output: source/main.cpp
-	g++ $(CFLAGS) -o build/output source/main.cpp $(LDFLAGS)
-	
+output:
+	g++ $(CFLAGS) -o build/output $(SOURCES) $(INC_KANJI) $(LDFLAGS)
+
 exec: build/output
-	./build/output
+	./output.sh
 
-compileshaders: shaders/test_shader.vert shaders/test_shader.frag
-	glslc shaders/test_shader.vert -o shaders/test_shader.vert.spv
-	glslc shaders/test_shader.frag -o shaders/test_shader.frag.spv
+compileshaders: kanji/renderer/shaders/main.vert kanji/renderer/shaders/main.frag
+	glslc kanji/renderer/shaders/main.vert -o build/shaders/main.vert.spv
+	glslc kanji/renderer/shaders/main.frag -o build/shaders/main.frag.spv
 
 clean: 
 	rm build/output

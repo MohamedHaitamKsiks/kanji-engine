@@ -1,6 +1,13 @@
 #include <iostream>
+#include "kanji.h"
+
+
+Kanji::KanjiGame game{};
+
 
 int main() {
-    std::cout << "Hello world" << std::endl;
+    game.start();
+    game.destroy();
+    
     return 0;
 }

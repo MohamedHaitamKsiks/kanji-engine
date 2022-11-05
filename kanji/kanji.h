@@ -26,10 +26,27 @@
 
 */
 
+#pragma once
+
+#include "renderer/vapp.h"
+#include <iostream>
+
+
+
 namespace Kanji {
     // a kajin engine class
-    class Kanji {
+    class KanjiGame {
         
+        public:
+            // vapp
+            VApp app{};
+            // start kanji game
+            void start();
+            // destroy kanji game
+            void destroy();
+
+        private:
+
     };
 
 }
