@@ -1,4 +1,5 @@
 #include "kanji.h"
+#include "renderer/vertex.h"
 
 // update functions
 void update(double delta) {
@@ -9,6 +10,7 @@ namespace Kanji {
 
     // start kanji game
     void KanjiGame::start() {
+        std::cout << sizeof(vertex) << std::endl;
         // init vapp
         app.init();
         

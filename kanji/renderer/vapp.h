@@ -8,11 +8,13 @@
 #include <algorithm>
 #include <fstream>
 #include <stdexcept>
+#include <cstring>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include "core/math/math.h"
+#include "vertex.h"
 
 
 namespace Kanji {
@@ -118,6 +120,13 @@ namespace Kanji {
             void pipelineCreate(const std::string& vertFilePath, const std::string& fragFilePath);
             void pipelineDestroy();
 
+            // vertex buffer
+            VkBuffer vertexBuffer;
+            VkDeviceMemory vertexBufferMemory;
+            uint32_t vertexBufferFindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+            void vertexBufferCreate();
+            void vertexBufferDestroy();
+
             // vulkan render pass
             VkRenderPass renderPass;
             void renderPassCreate();
@@ -149,6 +158,14 @@ namespace Kanji {
             //after setting up vulkan for the vulkan app we can finally start rendering somthing in the screen
             // draw frame
             void drawFrame();
+
+            // temporary variables (useless for later on)
+            const std::vector<vertex> vertices = {
+                {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+                {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+                {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+            };
+
     };
 
 }

@@ -23,8 +23,8 @@ namespace Kanji {
     }
 
     vec2 VApp::windowGetSize() {
-        double width = static_cast<double>(window.width);
-        double height = static_cast<double>(window.height);
+        float width = static_cast<double>(window.width);
+        float height = static_cast<double>(window.height);
         return vec2{width, height};
     }
 
@@ -435,13 +435,17 @@ namespace Kanji {
         dynamicState.dynamicStateCount = static_cast<uint32_t>(vpipeline.dynamicStates.size());
         dynamicState.pDynamicStates = vpipeline.dynamicStates.data();
 
-        //vertex input (later)
+        //vertex input (now)
+        // get vertex descritoion
+        auto bindingDescription = vertex::getBindingDescription();
+        auto attributeDescriptions = vertex::getAttributeDescriptions();
+        //fill vertex input info
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = 0;
-        vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
-        vertexInputInfo.vertexAttributeDescriptionCount = 0;
-        vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+        vertexInputInfo.vertexBindingDescriptionCount = 1;
+        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription; // pass biding description
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // pass attribute description
 
         //input assembly 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -625,6 +629,61 @@ namespace Kanji {
     }
 
     // vulkan buffers
+    // vulkan vertex buffer
+    // vertex buffer find memory type
+    uint32_t VApp::vertexBufferFindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+        VkPhysicalDeviceMemoryProperties memProperties;
+        vkGetPhysicalDeviceMemoryProperties(vdevice.physicalDevice, &memProperties);
+
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+            if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+                return i;
+            }
+        }
+
+        throw std::runtime_error("failed to find suitable memory type!");
+        return UINT32_MAX;
+
+    }
+
+    // create vertex buffer
+    void VApp::vertexBufferCreate() {
+        VkBufferCreateInfo bufferInfo{};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size = sizeof(vertex) * vertices.size();
+        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateBuffer(vdevice.device, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create vertex buffer!");
+        }
+
+        //allocate memory to the buffer
+        //memory requirment
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(vdevice.device, vertexBuffer, &memRequirements);
+        // allocate memory
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = vertexBufferFindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        if (vkAllocateMemory(vdevice.device, &allocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate vertex buffer memory!");
+        }
+        vkBindBufferMemory(vdevice.device, vertexBuffer, vertexBufferMemory, 0);
+        //fill the vertex shader
+        void* data;
+        vkMapMemory(vdevice.device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+        memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+        vkUnmapMemory(vdevice.device, vertexBufferMemory);
+    }
+
+    // destroy vertex buffer
+    void VApp::vertexBufferDestroy() {
+        vkDestroyBuffer(vdevice.device, vertexBuffer, nullptr);
+        vkFreeMemory(vdevice.device, vertexBufferMemory, nullptr);
+    }
+
     // vulkan frame buffer
     // vulkan create frame buffers
     void VApp::frameBuffersCreate() {
@@ -717,7 +776,6 @@ namespace Kanji {
         //bind pipeline
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vpipeline.graphics);
 
-
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
@@ -732,7 +790,12 @@ namespace Kanji {
         scissor.extent = vswapChain.swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        // bind the vertex buffer
+        VkBuffer vertexBuffers[] = {vertexBuffer};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+        vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -840,6 +903,7 @@ namespace Kanji {
         // create buffers
         frameBuffersCreate();
         commandPoolCreate();
+        vertexBufferCreate();
         commandBufferCreate();
         // create sync objects
         syncObjectsCreate();
@@ -862,6 +926,7 @@ namespace Kanji {
         // destroy sync objects
         syncObjectsDestroy();
         // destroy buffers
+        vertexBufferDestroy();
         commandPoolDestroy();
         frameBufferDestroy();
         // destroy vulkan pipeline
@@ -876,7 +941,6 @@ namespace Kanji {
         vkDestroySurfaceKHR(instance, surface, nullptr);
         //destroy vulkan instance
         vkDestroyInstance(instance, nullptr);
-        
         //destroy window
         glfwDestroyWindow(window.glfwWindow);
         glfwTerminate();
