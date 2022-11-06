@@ -3,16 +3,21 @@
 #include <cmath>
 
 //vectors
+namespace Kanji {
+    //vector 2D
+    typedef struct vec2 {
+        float x;
+        float y;
+    } vec2;
 
-//vector 2D
-typedef struct vec2 {
-    float x;
-    float y;
-} vec2;
+    //vector 3D
+    typedef struct vec3 {
+        float x;
+        float y;
+        float z;
+    } vec3;
 
-//vector 3D
-typedef struct vec3 {
-    float x;
-    float y;
-    float z;
-} vec3;
+    
+}
+
+

@@ -631,7 +631,7 @@ namespace Kanji {
     // vulkan buffers
     // vulkan vertex buffer
     // vertex buffer find memory type
-    uint32_t VApp::vertexBufferFindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+    uint32_t VApp::bufferFindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
         VkPhysicalDeviceMemoryProperties memProperties;
         vkGetPhysicalDeviceMemoryProperties(vdevice.physicalDevice, &memProperties);
 
@@ -647,41 +647,45 @@ namespace Kanji {
     }
 
     // create vertex buffer
-    void VApp::vertexBufferCreate() {
+    void VApp::bufferCreate(Buffer* buffer, size_t bufferSize) {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = sizeof(vertex) * vertices.size();
+        bufferInfo.size = bufferSize;
         bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        buffer->size = bufferInfo.size;
 
-        if (vkCreateBuffer(vdevice.device, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
+        if (vkCreateBuffer(vdevice.device, &bufferInfo, nullptr, &buffer->buffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to create vertex buffer!");
         }
 
         //allocate memory to the buffer
         //memory requirment
         VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(vdevice.device, vertexBuffer, &memRequirements);
+        vkGetBufferMemoryRequirements(vdevice.device, buffer->buffer, &memRequirements);
         // allocate memory
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = vertexBufferFindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        if (vkAllocateMemory(vdevice.device, &allocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {
+        allocInfo.memoryTypeIndex = bufferFindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        if (vkAllocateMemory(vdevice.device, &allocInfo, nullptr, &buffer->memory) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate vertex buffer memory!");
         }
-        vkBindBufferMemory(vdevice.device, vertexBuffer, vertexBufferMemory, 0);
-        //fill the vertex shader
+        vkBindBufferMemory(vdevice.device, buffer->buffer, buffer->memory, 0);
+    }
+
+    // push data to buffer memory
+    void VApp::bufferPush(Buffer* buffer, const void* bufferData) {
         void* data;
-        vkMapMemory(vdevice.device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-        memcpy(data, vertices.data(), (size_t) bufferInfo.size);
-        vkUnmapMemory(vdevice.device, vertexBufferMemory);
+        vkMapMemory(vdevice.device, buffer->memory, 0, buffer->size, 0, &data);
+        memcpy(data, bufferData, (size_t) buffer->size);
+        vkUnmapMemory(vdevice.device, buffer->memory);
     }
 
     // destroy vertex buffer
-    void VApp::vertexBufferDestroy() {
-        vkDestroyBuffer(vdevice.device, vertexBuffer, nullptr);
-        vkFreeMemory(vdevice.device, vertexBufferMemory, nullptr);
+    void VApp::bufferDestroy(Buffer* buffer) {
+        vkDestroyBuffer(vdevice.device, buffer->buffer, nullptr);
+        vkFreeMemory(vdevice.device, buffer->memory, nullptr);
     }
 
     // vulkan frame buffer
@@ -791,11 +795,14 @@ namespace Kanji {
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         // bind the vertex buffer
-        VkBuffer vertexBuffers[] = {vertexBuffer};
+        VkBuffer vertexBuffers[] = {vertexBuffer.buffer};
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+        // bind index buffer
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+
+        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -903,7 +910,13 @@ namespace Kanji {
         // create buffers
         frameBuffersCreate();
         commandPoolCreate();
-        vertexBufferCreate();
+        // create vertex buffer
+        bufferCreate(&vertexBuffer, sizeof(vertex) * vertices.size());
+        bufferPush(&vertexBuffer, vertices.data());
+        // create index buffer
+        bufferCreate(&indexBuffer, sizeof(uint16_t) * indices.size());
+        bufferPush(&indexBuffer, indices.data());
+        // create command buffer
         commandBufferCreate();
         // create sync objects
         syncObjectsCreate();
@@ -918,6 +931,11 @@ namespace Kanji {
             drawFrame();
             // call update function
             update(0.0);
+            for (int i = 0; i < vertices.size(); i++){
+                vertices[i].position.x += 0.001f;
+            }
+            bufferPush(&vertexBuffer, vertices.data());
+            bufferPush(&indexBuffer, indices.data());
         }
     }
 
@@ -926,7 +944,8 @@ namespace Kanji {
         // destroy sync objects
         syncObjectsDestroy();
         // destroy buffers
-        vertexBufferDestroy();
+        bufferDestroy(&vertexBuffer);
+        bufferDestroy(&indexBuffer);
         commandPoolDestroy();
         frameBufferDestroy();
         // destroy vulkan pipeline

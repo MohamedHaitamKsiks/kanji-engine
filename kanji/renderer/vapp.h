@@ -32,6 +32,13 @@ namespace Kanji {
         std::vector<VkPresentModeKHR> presentModes;
     };
 
+    // buffers
+    typedef struct Buffer {
+        VkBuffer buffer;
+        VkDeviceSize size;
+        VkDeviceMemory memory;
+    } Buffer;
+
     //vulkan app class
     class VApp {
 
@@ -120,12 +127,16 @@ namespace Kanji {
             void pipelineCreate(const std::string& vertFilePath, const std::string& fragFilePath);
             void pipelineDestroy();
 
-            // vertex buffer
-            VkBuffer vertexBuffer;
-            VkDeviceMemory vertexBufferMemory;
-            uint32_t vertexBufferFindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-            void vertexBufferCreate();
-            void vertexBufferDestroy();
+            // buffer methods
+            uint32_t bufferFindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+            void bufferCreate(Buffer* buffer, size_t bufferSize);
+            void bufferDestroy(Buffer* buffer);
+            void bufferPush(Buffer* buffer, const void* bufferData);
+
+            //vertex buffer
+            Buffer vertexBuffer;
+            //index buffer
+            Buffer indexBuffer;
 
             // vulkan render pass
             VkRenderPass renderPass;
@@ -160,10 +171,16 @@ namespace Kanji {
             void drawFrame();
 
             // temporary variables (useless for later on)
-            const std::vector<vertex> vertices = {
-                {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-                {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-                {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+            std::vector<vertex> vertices = {
+                {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+                {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+                {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+                {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+            };
+
+            std::vector<uint16_t> indices = {
+                0, 1, 2,
+                2, 3, 0
             };
 
     };
