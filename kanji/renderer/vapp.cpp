@@ -931,6 +931,10 @@ namespace Kanji {
             drawFrame();
             // call update function
             update(0.0);
+            // moving the rectangle requires us to re push all the verticies
+            // very slow => it should be replaced by more efficient method
+            // only push verticies for new mesh
+            //  push transfromation
             for (int i = 0; i < vertices.size(); i++){
                 vertices[i].position.x += 0.001f;
             }

@@ -1,3 +1,4 @@
+
 # kanji-engine
 
  ## Description
@@ -9,11 +10,11 @@
 1-renderer (I'll be using the vulkan API)
 
 2-core
-    a-Memory managment
-    b-Async files i/o
-    c-Math class (vectors, transformation matrices ...)
-    d-Threads (later)
-    e-StringID
+    *a-Memory managment
+    *b-Async files i/o
+    *c-Math class (vectors, transformation matrices ...)
+    *d-Threads (later)
+    *e-StringID
 
 3-EntityComponentSystem (ECS)
 
