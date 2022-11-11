@@ -7,26 +7,33 @@
 
 ## Goals:
 
-1-renderer (I'll be using the vulkan API)
+### 1-renderer (I'll be using the vulkan API)
 
-2-core
-    *a-Memory managment
-    *b-Async files i/o
-    *c-Math class (vectors, transformation matrices ...)
-    *d-Threads (later)
-    *e-StringID
+### 2-core
 
-3-EntityComponentSystem (ECS)
+    a-Memory managment
+    b-Async files i/o
+    c-Math class (vectors, transformation matrices ...)
+    d-Threads (later)
+    e-StringID
 
-4-scenes
+### 3-EntityComponentSystem (ECS)
 
-5-audio
+### 4-scenes
 
-6-physics
+### 5-audio
 
-7-events
+### 6-physics
 
-8-ressources
+### 7-events
+
+### 8-ressources
+
+## Cool Ideas that I might add later.
+
+### 1- scripting language
+
+### 2- promises (like in java script)
 
     
 ## Features:

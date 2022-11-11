@@ -29,11 +29,22 @@
 #pragma once
 
 #include "renderer/vapp.h"
-#include <iostream>
+#include "core/memory/allocator.h"
 
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <chrono>
+using namespace std::chrono;
+
+
+typedef struct TestType {
+    char chunk[1024];
+} TestType;
 
 
 namespace Kanji {
+    
     // a kajin engine class
     class KanjiGame {
         
@@ -46,6 +57,8 @@ namespace Kanji {
             void destroy();
 
         private:
+
+            PoolAllocator<TestType> pool;
 
     };
 

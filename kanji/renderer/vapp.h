@@ -14,8 +14,14 @@
 #include <GLFW/glfw3.h>
 
 #include "core/math/math.h"
+#include "core/memory/allocator.h"
+#include "core/time/time.h"
 #include "vertex.h"
+#include "mesh_info.h"
 
+
+#define VERTEX_BUFFER_SIZE UINT16_MAX
+#define INDEX_BUFFER_SIZE UINT16_MAX
 
 namespace Kanji {
     
@@ -37,6 +43,7 @@ namespace Kanji {
         VkBuffer buffer;
         VkDeviceSize size;
         VkDeviceMemory memory;
+        uint16_t head = 0;
     } Buffer;
 
     //vulkan app class
@@ -50,6 +57,12 @@ namespace Kanji {
             // window fullscreen
             void windowSetFullScreen(bool fullScreen);
             bool windowGetFullScreen();
+
+            // mesh
+            // load mesh from list of verticies and indices
+            MeshInfo meshLoad(std::vector<Vertex> vertices, std::vector<uint16_t> indices);
+            // free mesh from memory
+            void meshFree(MeshInfo mesh);
         
             //init vulkan app
             void init();
@@ -131,7 +144,8 @@ namespace Kanji {
             uint32_t bufferFindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
             void bufferCreate(Buffer* buffer, size_t bufferSize);
             void bufferDestroy(Buffer* buffer);
-            void bufferPush(Buffer* buffer, const void* bufferData);
+            void bufferPush(Buffer* buffer, const void* bufferData, const size_t size);
+            void bufferDelete(Buffer* buffer, const uint16_t index, const size_t size);
 
             //vertex buffer
             Buffer vertexBuffer;
@@ -170,17 +184,9 @@ namespace Kanji {
             // draw frame
             void drawFrame();
 
-            // temporary variables (useless for later on)
-            std::vector<vertex> vertices = {
-                {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-                {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-                {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-                {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
-            };
-
-            std::vector<uint16_t> indices = {
-                0, 1, 2,
-                2, 3, 0
+            vec2 offset = vec2{
+                0.0,
+                0.0,
             };
 
     };

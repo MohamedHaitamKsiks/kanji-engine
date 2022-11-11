@@ -437,8 +437,8 @@ namespace Kanji {
 
         //vertex input (now)
         // get vertex descritoion
-        auto bindingDescription = vertex::getBindingDescription();
-        auto attributeDescriptions = vertex::getAttributeDescriptions();
+        auto bindingDescription = Vertex::getBindingDescription();
+        auto attributeDescriptions = Vertex::getAttributeDescriptions();
         //fill vertex input info
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -675,11 +675,20 @@ namespace Kanji {
     }
 
     // push data to buffer memory
-    void VApp::bufferPush(Buffer* buffer, const void* bufferData) {
+    void VApp::bufferPush(Buffer* buffer, const void* bufferData, const size_t size) {
         void* data;
-        vkMapMemory(vdevice.device, buffer->memory, 0, buffer->size, 0, &data);
-        memcpy(data, bufferData, (size_t) buffer->size);
+        vkMapMemory(vdevice.device, buffer->memory, buffer->head, (VkDeviceSize) size, 0, &data);
+        memcpy(data, bufferData, size);
         vkUnmapMemory(vdevice.device, buffer->memory);
+        buffer->head += (uint16_t) size;
+    }
+
+    void VApp::bufferDelete(Buffer* buffer, const uint16_t index, const size_t size) {
+        void* data;
+        vkMapMemory(vdevice.device, buffer->memory, index, (VkDeviceSize) (buffer->size - index), 0, &data);
+        memcpy(data, data + size, (buffer->size - index - size));
+        vkUnmapMemory(vdevice.device, buffer->memory);
+        buffer->head -= (uint16_t) size;
     }
 
     // destroy vertex buffer
@@ -794,16 +803,18 @@ namespace Kanji {
         scissor.extent = vswapChain.swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        // bind the vertex buffer
+        // bind buffers
         VkBuffer vertexBuffers[] = {vertexBuffer.buffer};
         VkDeviceSize offsets[] = {0};
+        // bind the vertex buffer
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
         // bind index buffer
         vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+        // push draw
+        vkCmdPushConstants(commandBuffer, vpipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Vertex), &offset);
+        vkCmdDrawIndexed(commandBuffer, indexBuffer.head, 1, 0, 0, 0);
 
-        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-
+        //end render pass
         vkCmdEndRenderPass(commandBuffer);
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
@@ -890,6 +901,27 @@ namespace Kanji {
 
     }
 
+    // mesh
+    // load mesh from list of verticies and indices
+    MeshInfo VApp::meshLoad(std::vector<Vertex> vertices, std::vector<uint16_t> indices) {
+        // get mesh data
+        MeshInfo meshInfo;
+        meshInfo.vertexBufferIndex = vertexBuffer.head;
+        meshInfo.indexBufferIndex = indexBuffer.head;
+        meshInfo.vertexBufferSize = vertices.size() * sizeof(Vertex);
+        meshInfo.indexBufferSize = indices.size() * sizeof(uint16_t);
+
+        // push data to the buffers
+        bufferPush(&vertexBuffer, vertices.data(), meshInfo.vertexBufferSize);
+        bufferPush(&indexBuffer, indices.data(), meshInfo.indexBufferSize);
+        // return mehs info
+        return meshInfo;
+    }
+    // free mesh from memory
+    void VApp::meshFree(MeshInfo meshInfo) {
+        bufferDelete(&vertexBuffer, meshInfo.vertexBufferIndex, meshInfo.vertexBufferSize);
+        bufferDelete(&indexBuffer, meshInfo.indexBufferIndex, meshInfo.indexBufferSize);
+    }
 
     //init vulkan app
     void VApp::init() {
@@ -911,11 +943,9 @@ namespace Kanji {
         frameBuffersCreate();
         commandPoolCreate();
         // create vertex buffer
-        bufferCreate(&vertexBuffer, sizeof(vertex) * vertices.size());
-        bufferPush(&vertexBuffer, vertices.data());
+        bufferCreate(&vertexBuffer, VERTEX_BUFFER_SIZE);
         // create index buffer
-        bufferCreate(&indexBuffer, sizeof(uint16_t) * indices.size());
-        bufferPush(&indexBuffer, indices.data());
+        bufferCreate(&indexBuffer, INDEX_BUFFER_SIZE);
         // create command buffer
         commandBufferCreate();
         // create sync objects
@@ -926,20 +956,13 @@ namespace Kanji {
     // start vulkan app
     // pass update function as parameter
     void VApp::start(void (*update)(double delta)) {
+        double delta = 0.0;
         while(!glfwWindowShouldClose(window.glfwWindow)){
+            double startTime = Time::now();
             glfwPollEvents();
             drawFrame();
-            // call update function
-            update(0.0);
-            // moving the rectangle requires us to re push all the verticies
-            // very slow => it should be replaced by more efficient method
-            // only push verticies for new mesh
-            //  push transfromation
-            for (int i = 0; i < vertices.size(); i++){
-                vertices[i].position.x += 0.001f;
-            }
-            bufferPush(&vertexBuffer, vertices.data());
-            bufferPush(&indexBuffer, indices.data());
+            update(delta);
+            delta = Time::now() - startTime;
         }
     }
 
