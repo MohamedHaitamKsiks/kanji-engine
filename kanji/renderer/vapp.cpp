@@ -685,9 +685,11 @@ namespace Kanji {
 
     void VApp::bufferDelete(Buffer* buffer, const uint16_t index, const size_t size) {
         void* data;
-        vkMapMemory(vdevice.device, buffer->memory, index, (VkDeviceSize) (buffer->size - index), 0, &data);
-        memcpy(data, data + size, (buffer->size - index - size));
-        vkUnmapMemory(vdevice.device, buffer->memory);
+        if (index + size < buffer->head) {
+            vkMapMemory(vdevice.device, buffer->memory, index, (VkDeviceSize) (buffer->size - index), 0, &data);
+            memcpy(data, (void*) ((char*)data + size), (buffer->size - index - size));
+            vkUnmapMemory(vdevice.device, buffer->memory);
+        }
         buffer->head -= (uint16_t) size;
     }
 
@@ -803,16 +805,18 @@ namespace Kanji {
         scissor.extent = vswapChain.swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        // bind buffers
-        VkBuffer vertexBuffers[] = {vertexBuffer.buffer};
-        VkDeviceSize offsets[] = {0};
-        // bind the vertex buffer
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        // bind index buffer
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
-        // push draw
-        vkCmdPushConstants(commandBuffer, vpipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Vertex), &offset);
-        vkCmdDrawIndexed(commandBuffer, indexBuffer.head, 1, 0, 0, 0);
+        //draw all mesh Instances
+        for (ChunkId i = 0; i < meshInstances.getMaxSize(); i++) {
+            if (meshInstances.isUsed(i)) {
+                MeshInstance* instance = meshInstances.get(i);
+                MeshInfo meshInfo = *meshInfos.get(instance->mesh);
+                PushConstant pushConstant = PushConstant{
+                    instance->transform
+                };
+                meshBind(meshInfo);
+                meshDraw(meshInfo, &pushConstant);
+            }
+        }
 
         //end render pass
         vkCmdEndRenderPass(commandBuffer);
@@ -903,7 +907,7 @@ namespace Kanji {
 
     // mesh
     // load mesh from list of verticies and indices
-    MeshInfo VApp::meshLoad(std::vector<Vertex> vertices, std::vector<uint16_t> indices) {
+    Mesh VApp::meshLoad(std::vector<Vertex> vertices, std::vector<uint16_t> indices) {
         // get mesh data
         MeshInfo meshInfo;
         meshInfo.vertexBufferIndex = vertexBuffer.head;
@@ -914,13 +918,52 @@ namespace Kanji {
         // push data to the buffers
         bufferPush(&vertexBuffer, vertices.data(), meshInfo.vertexBufferSize);
         bufferPush(&indexBuffer, indices.data(), meshInfo.indexBufferSize);
-        // return mehs info
-        return meshInfo;
+
+        // push data to the mesh allocator
+        Mesh mesh = meshInfos.alloc();
+        *(meshInfos.get(mesh)) = meshInfo;
+
+        // return mesh
+        return mesh;
     }
+
+    // mesh draw
+    void VApp::meshDraw(MeshInfo meshInfo, PushConstant* pushConstant) {
+        vkCmdPushConstants(commandBuffer, vpipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), pushConstant);
+        vkCmdDrawIndexed(commandBuffer, meshInfo.indexBufferSize, 1, 0, 0, 0);
+    }
+
+    // mesh bind
+    // always bind before draw
+    void VApp::meshBind(MeshInfo meshInfo) {
+        VkBuffer vertexBuffers[] = {vertexBuffer.buffer};
+        VkDeviceSize offsets[] = {meshInfo.vertexBufferIndex};
+        // bind the vertex buffer
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        // bind index buffer
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, meshInfo.indexBufferIndex, VK_INDEX_TYPE_UINT16);
+    }
+
     // free mesh from memory
-    void VApp::meshFree(MeshInfo meshInfo) {
+    void VApp::meshFree(Mesh mesh) {
+        MeshInfo meshInfo = *(meshInfos.get(mesh));
+        //free mesh from buffers
         bufferDelete(&vertexBuffer, meshInfo.vertexBufferIndex, meshInfo.vertexBufferSize);
         bufferDelete(&indexBuffer, meshInfo.indexBufferIndex, meshInfo.indexBufferSize);
+        //free mesh info from allocator
+        meshInfos.free(mesh);
+    }
+
+    //mesh create instance
+    MeshInstance* VApp::meshInstanceCreate(Mesh mesh) {
+        //allocate new mesh instance
+        ChunkId meshInstanceIndex = meshInstances.alloc();
+        //push newMeshInstance values to the alloc
+        MeshInstance* meshInstance = meshInstances.get(meshInstanceIndex);
+        meshInstance->mesh = mesh;
+        meshInstance->transform = mat3::basis();
+        //return mesh isntance
+        return meshInstance;
     }
 
     //init vulkan app
@@ -950,6 +993,9 @@ namespace Kanji {
         commandBufferCreate();
         // create sync objects
         syncObjectsCreate();
+        // create mesh & meshinstance allocators
+        meshInfos.init(1024);
+        meshInstances.init(1024);
 
     }
 

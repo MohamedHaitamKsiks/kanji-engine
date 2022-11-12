@@ -2,6 +2,7 @@
 
 
 #include <cstdlib>
+#define CHUNK_END -1;
 
 namespace Kanji {
     
@@ -19,9 +20,11 @@ namespace Kanji {
                 // allocate space for data and 
                 data = (T*) (malloc(sizeof(T) * poolSize));
                 freeChunkNext = (ChunkId*) (malloc(sizeof(ChunkId) * poolSize));
+                usedChunks = (bool*) (malloc(sizeof(bool) * poolSize));
                 //prepare freechunk linked list
                 for (ChunkId i = 0; i < poolSize; i++) {
                     freeChunkNext[i] = (i + 1) % maxSize;
+                    usedChunks[i] = false;
                 }
 
             };
@@ -29,6 +32,9 @@ namespace Kanji {
             ChunkId alloc() {
                 // get index
                 ChunkId index = freeHead;
+                //
+                usedChunks[index] = true;
+
                 //move head to the next node
                 freeHead = freeChunkNext[freeHead];
                 // increase size
@@ -39,11 +45,19 @@ namespace Kanji {
             void free(ChunkId index) {
                 freeChunkNext[index] = freeHead; 
                 freeHead = index;
+                usedChunks[index] = false;
             };
-            // get data
-            T* getData() {
-                return data;
+
+            //is chunk used
+            bool isUsed(ChunkId index) {
+                return usedChunks[index];
+            }
+
+            // get data at position
+            T* get(ChunkId index) {
+                return data + index;
             };
+
             //get sizes
             size_t getMaxSize() {
                 return maxSize;
@@ -57,8 +71,10 @@ namespace Kanji {
             T* data;
             size_t maxSize;
             size_t size;
-            ChunkId  freeHead = 0;
+            // linked list of all free chunks 
+            ChunkId freeHead = 0;
             ChunkId* freeChunkNext;
+            bool* usedChunks;
     };
 
 }

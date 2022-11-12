@@ -17,7 +17,7 @@
 #include "core/memory/allocator.h"
 #include "core/time/time.h"
 #include "vertex.h"
-#include "mesh_info.h"
+#include "mesh.h"
 
 
 #define VERTEX_BUFFER_SIZE UINT16_MAX
@@ -46,6 +46,11 @@ namespace Kanji {
         uint16_t head = 0;
     } Buffer;
 
+    //push constant struct
+    typedef struct PushConstant {
+        mat3 transform;
+    } PushConstant;
+
     //vulkan app class
     class VApp {
 
@@ -60,10 +65,12 @@ namespace Kanji {
 
             // mesh
             // load mesh from list of verticies and indices
-            MeshInfo meshLoad(std::vector<Vertex> vertices, std::vector<uint16_t> indices);
+            Mesh meshLoad(std::vector<Vertex> vertices, std::vector<uint16_t> indices);
             // free mesh from memory
-            void meshFree(MeshInfo mesh);
-        
+            void meshFree(Mesh mesh);
+            // create instance
+            MeshInstance* meshInstanceCreate(Mesh mesh);
+            
             //init vulkan app
             void init();
             void start(void (*update)(double delta));
@@ -184,10 +191,15 @@ namespace Kanji {
             // draw frame
             void drawFrame();
 
-            vec2 offset = vec2{
-                0.0,
-                0.0,
-            };
+            // draw mesh
+            void meshDraw(MeshInfo meshInfo, PushConstant* pushConstant);
+            void meshBind(MeshInfo meshInfo);
+
+            // loaded meshs
+            PoolAllocator<MeshInfo> meshInfos;
+            // mesh instances
+            PoolAllocator<MeshInstance> meshInstances;
+
 
     };
 

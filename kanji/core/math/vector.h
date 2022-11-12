@@ -17,6 +17,14 @@ namespace Kanji {
         float z;
     } vec3;
 
+    //vector 4D
+    typedef struct vec4 {
+        float x;
+        float y;
+        float z;
+        float w;
+    } vec4;
+
     
 }
 
