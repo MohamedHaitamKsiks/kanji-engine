@@ -4,9 +4,9 @@ INC_KANJI = -I kanji/
 SOURCES = source/main.cpp kanji/kanji.cpp kanji/renderer/vapp.cpp kanji/renderer/vertex.cpp
 
 output: compileshaders
-	g++ $(CFLAGS) -o build/output $(SOURCES) $(INC_KANJI) $(LDFLAGS)
+	g++ $(CFLAGS) -o build/build.out $(SOURCES) $(INC_KANJI) $(LDFLAGS)
 
-exec: build/output
+exec: build/build.out
 	./output.sh
 
 compileshaders: kanji/renderer/shaders/main.vert kanji/renderer/shaders/main.frag

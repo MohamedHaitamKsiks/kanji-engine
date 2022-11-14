@@ -1,3 +1,3 @@
 cd build
-./output
+./build.out
 cd ..

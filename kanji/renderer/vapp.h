@@ -48,7 +48,7 @@ namespace Kanji {
 
     //push constant struct
     typedef struct PushConstant {
-        mat3 transform;
+        mat4 transform;
     } PushConstant;
 
     //vulkan app class

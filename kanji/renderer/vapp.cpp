@@ -961,7 +961,7 @@ namespace Kanji {
         //push newMeshInstance values to the alloc
         MeshInstance* meshInstance = meshInstances.get(meshInstanceIndex);
         meshInstance->mesh = mesh;
-        meshInstance->transform = mat3::basis();
+        meshInstance->transform = mat4::identity();
         //return mesh isntance
         return meshInstance;
     }
@@ -1003,10 +1003,16 @@ namespace Kanji {
     // pass update function as parameter
     void VApp::start(void (*update)(double delta)) {
         double delta = 0.0;
+        float angle = 0.0;
         while(!glfwWindowShouldClose(window.glfwWindow)){
             double startTime = Time::now();
             glfwPollEvents();
             drawFrame();
+            angle += 10.0 * delta;
+            float s = 1.0f;
+            meshInstances.get(0)->transform = mat4::ortho(-s, s, 1.0, s, -s, 10.0) * mat4::perspective(1.0, 5.0)
+            * mat4::translate(vec3{0.0, 0.0, 5.0})
+            * mat4::rotationY(0.5*angle) * mat4::rotationZ(2.0 * angle) * mat4::rotationX(angle) ;
             update(delta);
             delta = Time::now() - startTime;
         }

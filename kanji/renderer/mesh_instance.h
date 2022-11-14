@@ -9,7 +9,7 @@ namespace Kanji {
     typedef struct MeshInstance {
         Mesh mesh;
         // init transform
-        mat3 transform;
+        mat4 transform;
     } MeshInstance;
 
 }

@@ -2,4 +2,4 @@
 
 #include <cmath>
 #include "vector.h"
-#include "matrice.h"
+#include "matrix.h"

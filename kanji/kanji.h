@@ -35,12 +35,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <chrono>
-using namespace std::chrono;
 
-
-typedef struct TestType {
-    char chunk[1024];
-} TestType;
 
 
 namespace Kanji {
@@ -56,9 +51,6 @@ namespace Kanji {
             // destroy kanji game
             void destroy();
 
-        private:
-
-            PoolAllocator<TestType> pool;
 
     };
 
