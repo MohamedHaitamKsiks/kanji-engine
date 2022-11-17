@@ -21,7 +21,6 @@
 *.smod
 
 #compiled shaders
-*.spv
 
 # Compiled Static libraries
 *.lai

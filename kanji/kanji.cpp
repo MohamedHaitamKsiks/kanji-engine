@@ -1,25 +1,20 @@
 #include "kanji.h"
-#include "renderer/vertex.h"
 #include "core/time/time.h"
-#include "renderer/mesh.h"
+#include "renderer/mesh/mesh.h"
 
-
-
-// update functions
-void update(double delta) {
-    //std::cout << sizeof(Kanji::PushConstant) << std::endl;
-    
-}
 
 namespace Kanji {
 
     // start kanji game
     void KanjiGame::start() {
-        std::cout << sizeof(Vertex) << std::endl;
-        // init vapp
-        app.init();
 
-        
+        //create window
+        window.create();
+        // create vulkan context
+        vcontext.init(&window);
+        // create renderer
+        renderer.init(&vcontext);
+
         std::vector<Vertex> vertices = {
             {{-1.0f, -1.0f, -1.0f}, {1.0f, 0.0f, 0.0f}},
             {{1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
@@ -40,21 +35,31 @@ namespace Kanji {
             4, 5, 0, 0, 5, 1
         };
 
+        Mesh mesh1 = renderer.meshLoad(vertices, indices);
 
-        Mesh mesh1 = app.meshLoad(vertices, indices);
+        Kanji::MeshInstance* instance = renderer.meshInstanceCreate(mesh1);
 
-        Kanji::MeshInstance* instance = app.meshInstanceCreate(mesh1);
-        mat4::print(instance->transform);
+        double delta = 0.0;
+        float angle = 0.0;
+        //start main loop
+        while (!window.isClosed()) {
+            double startTime = Time::now();
+            glfwPollEvents();
+            renderer.drawFrame();
+            angle += 10.0 * delta;
+            float s = 1.0f;
+            instance->transform = mat4::ortho(-s, s, 1.0, s, -s, 10.0) * mat4::perspective(1.0, 5.0)
+            * mat4::translate(vec3{0.0, 0.0, 5.0})
+            * mat4::rotationY(0.5*angle) * mat4::rotationZ(2.0 * angle) * mat4::rotationX(angle) ;
+            delta = Time::now() - startTime;
+        }
 
-        std::cout << sizeof(Kanji::PushConstant) << std::endl;
-
-        //start vapp
-        app.start(&update);
     }
+
 
     // destroy kanji game
     void KanjiGame::destroy() {
-        app.destroy();
+        vcontext.destroy();
     }
 
 }

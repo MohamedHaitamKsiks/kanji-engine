@@ -16,15 +16,17 @@
 #include "core/math/math.h"
 #include "core/memory/allocator.h"
 #include "core/time/time.h"
-#include "vertex.h"
-#include "mesh.h"
-
+#include "mesh/mesh.h"
+#include "window.h"
+#include "buffer.h"
+#include "vdevice.h"
 
 #define VERTEX_BUFFER_SIZE UINT16_MAX
 #define INDEX_BUFFER_SIZE UINT16_MAX
 
+// vulkan cotnext to use trhe vulkan api
 namespace Kanji {
-    
+
     // queue family indicies
     struct QueueFamilyIndices {
         std::optional<uint32_t> graphicsFamily;
@@ -38,57 +40,46 @@ namespace Kanji {
         std::vector<VkPresentModeKHR> presentModes;
     };
 
-    // buffers
-    typedef struct Buffer {
-        VkBuffer buffer;
-        VkDeviceSize size;
-        VkDeviceMemory memory;
-        uint16_t head = 0;
-    } Buffer;
 
     //push constant struct
-    typedef struct PushConstant {
+    struct PushConstant {
         mat4 transform;
-    } PushConstant;
+    };
 
-    //vulkan app class
-    class VApp {
+
+    class VContext {
 
         public:
-            // window
-            // window size
-            void windowSetSize(vec2 size);
-            vec2 windowGetSize();
-            // window fullscreen
-            void windowSetFullScreen(bool fullScreen);
-            bool windowGetFullScreen();
-
-            // mesh
-            // load mesh from list of verticies and indices
-            Mesh meshLoad(std::vector<Vertex> vertices, std::vector<uint16_t> indices);
-            // free mesh from memory
-            void meshFree(Mesh mesh);
-            // create instance
-            MeshInstance* meshInstanceCreate(Mesh mesh);
-            
-            //init vulkan app
-            void init();
-            void start(void (*update)(double delta));
+            //init vulkan context
+            void init(Window* _window);
+            //destroy vulkan context
             void destroy();
 
+            //buffers
+            //vertex buffer
+            Buffer vertexBuffer;
+            //index buffer
+            Buffer indexBuffer;
 
+            // draw frame funcitons
+            // draw frame start 
+            void drawFrameStart(uint32_t* imageIndex);
+            // draw frame end
+            void drawFrameEnd(uint32_t* imageIndex);
+           
+            // command buffer start / end record
+            void commandBufferStartRecord(uint32_t imageIndex);
+            void commandBufferEndRecord();
+            
+            //mesh
+            void meshDraw(MeshInfo meshInfo, PushConstant* pushConstant);
+            void meshBind(MeshInfo meshInfo);
+
+            
         private:
             // window
-            struct {
-                GLFWwindow* glfwWindow;
-                int width = 640;
-                int height = 480;
-                bool fullScreen = false;
-                char title [32] = "Kanji App";
-            } window;
-            void windowInit();
-
-            // vulkna
+            Window* window;
+            // vulkan
             // vulkan instance
             VkInstance instance;
             void vulkanInstanceCreate();
@@ -96,16 +87,7 @@ namespace Kanji {
             VkSurfaceKHR surface;
             void vulkanSurfaceCreate();
             // vulkan device
-            struct {
-                VkDevice device;
-                VkQueue graphicsQueue;
-                VkQueue presentQueue;
-                VkPhysicalDevice physicalDevice;
-                const std::vector<const char*> deviceExtensions = {
-                    VK_KHR_SWAPCHAIN_EXTENSION_NAME
-                };
-                float queuePriority = 1.0f;
-            } vdevice;
+            VDevice vdevice;
             // vulkan device methods
             void deviceCreate();
             void devicePickPhysicalDevice();
@@ -147,18 +129,6 @@ namespace Kanji {
             void pipelineCreate(const std::string& vertFilePath, const std::string& fragFilePath);
             void pipelineDestroy();
 
-            // buffer methods
-            uint32_t bufferFindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-            void bufferCreate(Buffer* buffer, size_t bufferSize);
-            void bufferDestroy(Buffer* buffer);
-            void bufferPush(Buffer* buffer, const void* bufferData, const size_t size);
-            void bufferDelete(Buffer* buffer, const uint16_t index, const size_t size);
-
-            //vertex buffer
-            Buffer vertexBuffer;
-            //index buffer
-            Buffer indexBuffer;
-
             // vulkan render pass
             VkRenderPass renderPass;
             void renderPassCreate();
@@ -175,7 +145,6 @@ namespace Kanji {
             // command buffer
             VkCommandBuffer commandBuffer;
             void commandBufferCreate();
-            void commandBufferRecord(uint32_t imageIndex);
 
             // vulkan sync objects
             struct {
@@ -183,22 +152,11 @@ namespace Kanji {
                 VkSemaphore renderFinishedSemaphore;
                 VkFence inFlightFence;
             } syncObjects;
+
             // sync objects methods
             void syncObjectsCreate();
             void syncObjectsDestroy();
 
-            //after setting up vulkan for the vulkan app we can finally start rendering somthing in the screen
-            // draw frame
-            void drawFrame();
-
-            // draw mesh
-            void meshDraw(MeshInfo meshInfo, PushConstant* pushConstant);
-            void meshBind(MeshInfo meshInfo);
-
-            // loaded meshs
-            PoolAllocator<MeshInfo> meshInfos;
-            // mesh instances
-            PoolAllocator<MeshInstance> meshInstances;
 
 
     };

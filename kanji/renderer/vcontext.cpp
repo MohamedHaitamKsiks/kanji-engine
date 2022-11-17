@@ -1,51 +1,15 @@
-#include "vapp.h"
+#include "vcontext.h"
+
 
 namespace Kanji {
 
-    // window
-    // window init
-    void VApp::windowInit() {
-        glfwInit();
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-        //create the window
-        window.glfwWindow = glfwCreateWindow(window.width, window.height, window.title, nullptr, nullptr);
-
-    }
-
-
-    // window size
-    void VApp::windowSetSize(vec2 size) {
-        window.width = static_cast<int>(size.x);
-        window.height = static_cast<int>(size.y);
-        // resize glfw window
-        glfwSetWindowSize(window.glfwWindow, window.width, window.height);
-    }
-
-    vec2 VApp::windowGetSize() {
-        float width = static_cast<double>(window.width);
-        float height = static_cast<double>(window.height);
-        return vec2{width, height};
-    }
-
-    // window fullscreen
-    void VApp::windowSetFullScreen(bool fullScreen) {
-        window.fullScreen = fullScreen;
-    }
-
-    bool VApp::windowGetFullScreen() {
-        return window.fullScreen;
-    }
-
-    ///////////////////////////////////////////////////////////////
-
     // vulkan instance
     // create vulkan instance
-    void VApp::vulkanInstanceCreate() {
+    void VContext::vulkanInstanceCreate() {
         //vk app info
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.pApplicationName = window.title;
+        appInfo.pApplicationName = "Vulkan App";
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "Kanji";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -78,8 +42,8 @@ namespace Kanji {
     }
 
     // create vulkan surface to draw on
-    void VApp::vulkanSurfaceCreate() {
-        if (glfwCreateWindowSurface(instance, window.glfwWindow, nullptr, &surface) != VK_SUCCESS) {
+    void VContext::vulkanSurfaceCreate() {
+        if (glfwCreateWindowSurface(instance, window->getGLFWwindow(), nullptr, &surface) != VK_SUCCESS) {
             throw std::runtime_error("failed to create surface!");
         }
     }
@@ -87,13 +51,13 @@ namespace Kanji {
 
     // vulkan device
     // vulkan create logical device
-     void VApp::deviceCreate() {
+     void VContext::deviceCreate() {
         devicePickPhysicalDevice();
         deviceCreateLogicalDevice();
     }
 
     //pick graphics card (physical device) to use
-    void VApp::devicePickPhysicalDevice() {
+    void VContext::devicePickPhysicalDevice() {
         vdevice.physicalDevice = VK_NULL_HANDLE;
 
         //listing physical devices
@@ -124,7 +88,7 @@ namespace Kanji {
     }
 
     // check if device is suitable to be used
-    bool VApp::deviceIsDeviceSuitable(VkPhysicalDevice device, int currentDeviceIndex) {
+    bool VContext::deviceIsDeviceSuitable(VkPhysicalDevice device, int currentDeviceIndex) {
         VkPhysicalDeviceProperties deviceProperties;
         vkGetPhysicalDeviceProperties(device, &deviceProperties);
 
@@ -148,7 +112,7 @@ namespace Kanji {
     }
 
     // check physical device support for extention
-    bool VApp::deviceCheckDeviceExtensionSupport(VkPhysicalDevice device) {
+    bool VContext::deviceCheckDeviceExtensionSupport(VkPhysicalDevice device) {
         uint32_t extensionCount;
         vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -165,7 +129,7 @@ namespace Kanji {
     }
 
     //get swap chain query details
-    SwapChainSupportDetails VApp::deviceQuerySwapChainSupport(VkPhysicalDevice device) {
+    SwapChainSupportDetails VContext::deviceQuerySwapChainSupport(VkPhysicalDevice device) {
         SwapChainSupportDetails details;
         //capabilities
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
@@ -192,7 +156,7 @@ namespace Kanji {
     }
 
     //create logical device
-    void VApp::deviceCreateLogicalDevice() {
+    void VContext::deviceCreateLogicalDevice() {
         QueueFamilyIndices indices = deviceFindQueueFamilies(vdevice.physicalDevice);
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -230,7 +194,7 @@ namespace Kanji {
     }
 
     //queue familes
-    QueueFamilyIndices VApp::deviceFindQueueFamilies(VkPhysicalDevice device) {
+    QueueFamilyIndices VContext::deviceFindQueueFamilies(VkPhysicalDevice device) {
         QueueFamilyIndices indices;
 
         uint32_t queueFamilyCount = 0;
@@ -259,7 +223,7 @@ namespace Kanji {
 
     // vulkan swap chain
     // create the swap chain
-    void VApp::swapChainCreate() {
+    void VContext::swapChainCreate() {
         SwapChainSupportDetails swapChainSupport = deviceQuerySwapChainSupport(vdevice.physicalDevice);
 
         VkSurfaceFormatKHR surfaceFormat = swapChainChooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -304,7 +268,7 @@ namespace Kanji {
     }
 
     //chose the right surface format
-    VkSurfaceFormatKHR VApp::swapChainChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+    VkSurfaceFormatKHR VContext::swapChainChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
         for (const auto& availableFormat : availableFormats) {
             if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
                 return availableFormat;
@@ -314,7 +278,7 @@ namespace Kanji {
     }
 
     //chose the right presentation mode
-    VkPresentModeKHR VApp::swapChainChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
+    VkPresentModeKHR VContext::swapChainChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
         for (const auto& availablePresentMode : availablePresentModes) {
             if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR) {
                 return availablePresentMode;
@@ -325,13 +289,13 @@ namespace Kanji {
     }
 
     //chose the swap extent
-    VkExtent2D VApp::swapChainChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+    VkExtent2D VContext::swapChainChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
         if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
             return capabilities.currentExtent;
         }
 
         int width, height;
-        glfwGetFramebufferSize(window.glfwWindow, &width, &height);
+        glfwGetFramebufferSize(window->getGLFWwindow(), &width, &height);
 
         VkExtent2D actualExtent = {
             static_cast<uint32_t>(width),
@@ -347,7 +311,7 @@ namespace Kanji {
 
     // image views
     // create image views
-    void VApp::imageViewsCreate() {
+    void VContext::imageViewsCreate() {
         imageViews.resize(vswapChain.swapChainImages.size());
 
         for (size_t i = 0; i < vswapChain.swapChainImages.size(); i++) {
@@ -376,7 +340,7 @@ namespace Kanji {
     }
 
     // destroy image views
-    void VApp::imageViewDestroy() {
+    void VContext::imageViewDestroy() {
         for (auto imageView : imageViews) {
             vkDestroyImageView(vdevice.device, imageView, nullptr);
         }
@@ -384,7 +348,7 @@ namespace Kanji {
 
     // vulkan graphics pipeline
     // read file (used to read shaders bin)
-    std::vector<char> VApp::readFile(const std::string& filePath) {
+    std::vector<char> VContext::readFile(const std::string& filePath) {
         std::ifstream file{filePath, std::ios::ate | std::ios::binary};
 
         if (!file.is_open()) {
@@ -403,7 +367,7 @@ namespace Kanji {
 
 
     // vulkan create pipeline
-    void VApp::pipelineCreate(const std::string& vertFilePath, const std::string& fragFilePath){
+    void VContext::pipelineCreate(const std::string& vertFilePath, const std::string& fragFilePath){
         // read vertex shader file
         std::vector vertShaderCode = readFile(vertFilePath);
         std::cout << "vertex shader file size :" << vertShaderCode.size() << std::endl;
@@ -554,7 +518,7 @@ namespace Kanji {
     }
 
     //create shader modules
-    VkShaderModule VApp::pipelineCreateShaderModule(const std::vector<char>& code) {
+    VkShaderModule VContext::pipelineCreateShaderModule(const std::vector<char>& code) {
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         createInfo.codeSize = code.size();
@@ -569,7 +533,7 @@ namespace Kanji {
     }
 
     //create render pass
-    void VApp::renderPassCreate() {
+    void VContext::renderPassCreate() {
         VkAttachmentDescription colorAttachment{};
         colorAttachment.format = vswapChain.swapChainImageFormat;
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -624,84 +588,15 @@ namespace Kanji {
     }
 
     // vulkan destroy pipeline
-    void VApp::pipelineDestroy() {
+    void VContext::pipelineDestroy() {
         // nothing for now
     }
 
-    // vulkan buffers
-    // vulkan vertex buffer
-    // vertex buffer find memory type
-    uint32_t VApp::bufferFindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-        VkPhysicalDeviceMemoryProperties memProperties;
-        vkGetPhysicalDeviceMemoryProperties(vdevice.physicalDevice, &memProperties);
 
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-            if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-                return i;
-            }
-        }
-
-        throw std::runtime_error("failed to find suitable memory type!");
-        return UINT32_MAX;
-
-    }
-
-    // create vertex buffer
-    void VApp::bufferCreate(Buffer* buffer, size_t bufferSize) {
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = bufferSize;
-        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        buffer->size = bufferInfo.size;
-
-        if (vkCreateBuffer(vdevice.device, &bufferInfo, nullptr, &buffer->buffer) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create vertex buffer!");
-        }
-
-        //allocate memory to the buffer
-        //memory requirment
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(vdevice.device, buffer->buffer, &memRequirements);
-        // allocate memory
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = bufferFindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        if (vkAllocateMemory(vdevice.device, &allocInfo, nullptr, &buffer->memory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate vertex buffer memory!");
-        }
-        vkBindBufferMemory(vdevice.device, buffer->buffer, buffer->memory, 0);
-    }
-
-    // push data to buffer memory
-    void VApp::bufferPush(Buffer* buffer, const void* bufferData, const size_t size) {
-        void* data;
-        vkMapMemory(vdevice.device, buffer->memory, buffer->head, (VkDeviceSize) size, 0, &data);
-        memcpy(data, bufferData, size);
-        vkUnmapMemory(vdevice.device, buffer->memory);
-        buffer->head += (uint16_t) size;
-    }
-
-    void VApp::bufferDelete(Buffer* buffer, const uint16_t index, const size_t size) {
-        void* data;
-        if (index + size < buffer->head) {
-            vkMapMemory(vdevice.device, buffer->memory, index, (VkDeviceSize) (buffer->size - index), 0, &data);
-            memcpy(data, (void*) ((char*)data + size), (buffer->size - index - size));
-            vkUnmapMemory(vdevice.device, buffer->memory);
-        }
-        buffer->head -= (uint16_t) size;
-    }
-
-    // destroy vertex buffer
-    void VApp::bufferDestroy(Buffer* buffer) {
-        vkDestroyBuffer(vdevice.device, buffer->buffer, nullptr);
-        vkFreeMemory(vdevice.device, buffer->memory, nullptr);
-    }
 
     // vulkan frame buffer
     // vulkan create frame buffers
-    void VApp::frameBuffersCreate() {
+    void VContext::frameBuffersCreate() {
         frameBuffers.resize(imageViews.size());
 
         for (size_t i = 0; i < imageViews.size(); i++) {
@@ -725,7 +620,7 @@ namespace Kanji {
 
     }
     // destroy frame buffer
-    void VApp::frameBufferDestroy() {
+    void VContext::frameBufferDestroy() {
         for (auto framebuffer : frameBuffers) {
             vkDestroyFramebuffer(vdevice.device, framebuffer, nullptr);
         }
@@ -733,7 +628,7 @@ namespace Kanji {
 
     // command pool
     // create command pool
-    void VApp::commandPoolCreate() {
+    void VContext::commandPoolCreate() {
         QueueFamilyIndices queueFamilyIndices = deviceFindQueueFamilies(vdevice.physicalDevice);
 
         VkCommandPoolCreateInfo poolInfo{};
@@ -746,13 +641,13 @@ namespace Kanji {
         }
     }
     // destroy command pool
-    void VApp::commandPoolDestroy() {
+    void VContext::commandPoolDestroy() {
         vkDestroyCommandPool(vdevice.device, commandPool, nullptr);
     }
 
     // command buffer
     // create command buffer 
-    void VApp::commandBufferCreate() {
+    void VContext::commandBufferCreate() {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool = commandPool;
@@ -765,7 +660,8 @@ namespace Kanji {
     }
 
     // record command buffer
-    void VApp::commandBufferRecord(uint32_t imageIndex) {
+    // start command buffer record
+    void VContext::commandBufferStartRecord(uint32_t imageIndex) {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -804,20 +700,11 @@ namespace Kanji {
         scissor.offset = {0, 0};
         scissor.extent = vswapChain.swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+        
+    }
 
-        //draw all mesh Instances
-        for (ChunkId i = 0; i < meshInstances.getMaxSize(); i++) {
-            if (meshInstances.isUsed(i)) {
-                MeshInstance* instance = meshInstances.get(i);
-                MeshInfo meshInfo = *meshInfos.get(instance->mesh);
-                PushConstant pushConstant = PushConstant{
-                    instance->transform
-                };
-                meshBind(meshInfo);
-                meshDraw(meshInfo, &pushConstant);
-            }
-        }
-
+    // command buffer end record
+    void VContext::commandBufferEndRecord() {
         //end render pass
         vkCmdEndRenderPass(commandBuffer);
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -827,7 +714,7 @@ namespace Kanji {
 
     // vulkan sync objects
     // create vulkan sync objects
-    void VApp::syncObjectsCreate() {
+    void VContext::syncObjectsCreate() {
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     
@@ -843,7 +730,7 @@ namespace Kanji {
     }
 
     // destroy vulkan sync objects
-    void VApp::syncObjectsDestroy() {
+    void VContext::syncObjectsDestroy() {
         vkDestroySemaphore(vdevice.device, syncObjects.imageAvailableSemaphore, nullptr);
         vkDestroySemaphore(vdevice.device, syncObjects.renderFinishedSemaphore, nullptr);
         vkDestroyFence(vdevice.device, syncObjects.inFlightFence, nullptr);
@@ -852,22 +739,22 @@ namespace Kanji {
     /////////////////////////////////////////////////////////////
 
     // draw frame in the window
-    void VApp::drawFrame() {
+    void VContext::drawFrameStart(uint32_t* imageIndex) {
         //wait for previous frame to finish render
         vkWaitForFences(vdevice.device, 1, &syncObjects.inFlightFence, VK_TRUE, UINT64_MAX);
         //reset fence
         vkResetFences(vdevice.device, 1, &syncObjects.inFlightFence);
-        
-
         //aquaring an image from the swap chain
-        uint32_t imageIndex;
-        auto result = vkAcquireNextImageKHR(vdevice.device, vswapChain.swapChain, UINT64_MAX, syncObjects.imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-
-        //std::cout << imageIndex << std::endl;
-        //record command buffer
+        auto result = vkAcquireNextImageKHR(vdevice.device, vswapChain.swapChain, UINT64_MAX, syncObjects.imageAvailableSemaphore, VK_NULL_HANDLE, imageIndex);
+        //reset command buffer and start record
         vkResetCommandBuffer(commandBuffer, 0);
-        commandBufferRecord(imageIndex);
-        
+        commandBufferStartRecord(*imageIndex);
+    }
+
+    // end draw frame in the window
+    void VContext::drawFrameEnd(uint32_t* imageIndex) {
+        //end command buffer record
+        commandBufferEndRecord(); 
         //submit command buffer
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -899,43 +786,21 @@ namespace Kanji {
         VkSwapchainKHR swapChains[] = {vswapChain.swapChain};
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = swapChains;
-        presentInfo.pImageIndices = &imageIndex;
+        presentInfo.pImageIndices = imageIndex;
 
         vkQueuePresentKHR(vdevice.presentQueue, &presentInfo);
 
     }
 
-    // mesh
-    // load mesh from list of verticies and indices
-    Mesh VApp::meshLoad(std::vector<Vertex> vertices, std::vector<uint16_t> indices) {
-        // get mesh data
-        MeshInfo meshInfo;
-        meshInfo.vertexBufferIndex = vertexBuffer.head;
-        meshInfo.indexBufferIndex = indexBuffer.head;
-        meshInfo.vertexBufferSize = vertices.size() * sizeof(Vertex);
-        meshInfo.indexBufferSize = indices.size() * sizeof(uint16_t);
-
-        // push data to the buffers
-        bufferPush(&vertexBuffer, vertices.data(), meshInfo.vertexBufferSize);
-        bufferPush(&indexBuffer, indices.data(), meshInfo.indexBufferSize);
-
-        // push data to the mesh allocator
-        Mesh mesh = meshInfos.alloc();
-        *(meshInfos.get(mesh)) = meshInfo;
-
-        // return mesh
-        return mesh;
-    }
-
     // mesh draw
-    void VApp::meshDraw(MeshInfo meshInfo, PushConstant* pushConstant) {
+    void VContext::meshDraw(MeshInfo meshInfo, PushConstant* pushConstant) {
         vkCmdPushConstants(commandBuffer, vpipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), pushConstant);
         vkCmdDrawIndexed(commandBuffer, meshInfo.indexBufferSize, 1, 0, 0, 0);
     }
 
     // mesh bind
     // always bind before draw
-    void VApp::meshBind(MeshInfo meshInfo) {
+    void VContext::meshBind(MeshInfo meshInfo) {
         VkBuffer vertexBuffers[] = {vertexBuffer.buffer};
         VkDeviceSize offsets[] = {meshInfo.vertexBufferIndex};
         // bind the vertex buffer
@@ -944,32 +809,11 @@ namespace Kanji {
         vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, meshInfo.indexBufferIndex, VK_INDEX_TYPE_UINT16);
     }
 
-    // free mesh from memory
-    void VApp::meshFree(Mesh mesh) {
-        MeshInfo meshInfo = *(meshInfos.get(mesh));
-        //free mesh from buffers
-        bufferDelete(&vertexBuffer, meshInfo.vertexBufferIndex, meshInfo.vertexBufferSize);
-        bufferDelete(&indexBuffer, meshInfo.indexBufferIndex, meshInfo.indexBufferSize);
-        //free mesh info from allocator
-        meshInfos.free(mesh);
-    }
-
-    //mesh create instance
-    MeshInstance* VApp::meshInstanceCreate(Mesh mesh) {
-        //allocate new mesh instance
-        ChunkId meshInstanceIndex = meshInstances.alloc();
-        //push newMeshInstance values to the alloc
-        MeshInstance* meshInstance = meshInstances.get(meshInstanceIndex);
-        meshInstance->mesh = mesh;
-        meshInstance->transform = mat4::identity();
-        //return mesh isntance
-        return meshInstance;
-    }
 
     //init vulkan app
-    void VApp::init() {
+    void VContext::init(Window* _window) {
         // initiate window for vulkan app
-        windowInit();
+        window = _window;
         // create a vulkan istance
         vulkanInstanceCreate();
         // create vulkan surface
@@ -986,45 +830,23 @@ namespace Kanji {
         frameBuffersCreate();
         commandPoolCreate();
         // create vertex buffer
-        bufferCreate(&vertexBuffer, VERTEX_BUFFER_SIZE);
+        vertexBuffer.create(&vdevice, VERTEX_BUFFER_SIZE);
         // create index buffer
-        bufferCreate(&indexBuffer, INDEX_BUFFER_SIZE);
+        indexBuffer.create(&vdevice, INDEX_BUFFER_SIZE);
         // create command buffer
         commandBufferCreate();
         // create sync objects
         syncObjectsCreate();
-        // create mesh & meshinstance allocators
-        meshInfos.init(1024);
-        meshInstances.init(1024);
 
-    }
-
-    // start vulkan app
-    // pass update function as parameter
-    void VApp::start(void (*update)(double delta)) {
-        double delta = 0.0;
-        float angle = 0.0;
-        while(!glfwWindowShouldClose(window.glfwWindow)){
-            double startTime = Time::now();
-            glfwPollEvents();
-            drawFrame();
-            angle += 10.0 * delta;
-            float s = 1.0f;
-            meshInstances.get(0)->transform = mat4::ortho(-s, s, 1.0, s, -s, 10.0) * mat4::perspective(1.0, 5.0)
-            * mat4::translate(vec3{0.0, 0.0, 5.0})
-            * mat4::rotationY(0.5*angle) * mat4::rotationZ(2.0 * angle) * mat4::rotationX(angle) ;
-            update(delta);
-            delta = Time::now() - startTime;
-        }
     }
 
     // destroy vulkan app
-    void VApp::destroy() {
+    void VContext::destroy() {
         // destroy sync objects
         syncObjectsDestroy();
         // destroy buffers
-        bufferDestroy(&vertexBuffer);
-        bufferDestroy(&indexBuffer);
+        vertexBuffer.destroy();
+        indexBuffer.destroy();
         commandPoolDestroy();
         frameBufferDestroy();
         // destroy vulkan pipeline
@@ -1039,9 +861,6 @@ namespace Kanji {
         vkDestroySurfaceKHR(instance, surface, nullptr);
         //destroy vulkan instance
         vkDestroyInstance(instance, nullptr);
-        //destroy window
-        glfwDestroyWindow(window.glfwWindow);
-        glfwTerminate();
     }
 
 }

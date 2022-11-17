@@ -1,7 +1,7 @@
 CFLAGS = -std=c++17
 LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
 INC_KANJI = -I kanji/
-SOURCES = source/main.cpp kanji/kanji.cpp kanji/renderer/vapp.cpp kanji/renderer/vertex.cpp
+SOURCES = source/main.cpp kanji/kanji.cpp kanji/renderer/renderer.cpp kanji/renderer/buffer.cpp kanji/renderer/window.cpp kanji/renderer/vcontext.cpp kanji/renderer/mesh/vertex.cpp
 
 output: compileshaders
 	g++ $(CFLAGS) -o build/build.out $(SOURCES) $(INC_KANJI) $(LDFLAGS)

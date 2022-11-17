@@ -28,26 +28,31 @@
 
 #pragma once
 
-#include "renderer/vapp.h"
-#include "core/memory/allocator.h"
 
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
 #include <chrono>
 
-
+#include "core/memory/allocator.h"
+#include "renderer/renderer.h"
+#include "renderer/vcontext.h"
+#include "renderer/window.h"
 
 namespace Kanji {
     
     // a kajin engine class
     class KanjiGame {
+        private:
+            VContext vcontext{};
+            Window window{};
+            Renderer renderer{};
         
         public:
-            // vapp
-            VApp app{};
             // start kanji game
             void start();
+            // update
+            void update();
             // destroy kanji game
             void destroy();
 
