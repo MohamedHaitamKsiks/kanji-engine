@@ -2,6 +2,8 @@
 #include "core/time/time.h"
 #include "renderer/mesh/mesh.h"
 
+#include <cstdio>
+
 
 namespace Kanji {
 
@@ -16,14 +18,14 @@ namespace Kanji {
         renderer.init(&vcontext);
 
         std::vector<Vertex> vertices = {
-            {{-1.0f, -1.0f, -1.0f}, {1.0f, 0.0f, 0.0f}},
-            {{1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
-            {{1.0f, 1.0f, -1.0f}, {0.0f, 0.0f, 0.1f}},
-            {{-1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 0.0f}},
-            {{-1.0f, -1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
-            {{1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
-            {{1.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 0.5f}},
-            {{-1.0f, 1.0f, 1.0f}, {0.5f, 0.5f, 0.5f}},
+            {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f}},
+            {{1.0f, -1.0f, -1.0f}, {1.0f, 0.0f}},
+            {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f}},
+            {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f}},
+            {{-1.0f, -1.0f, 1.0f}, {0.0f, 0.0f}},
+            {{1.0f, -1.0f, 1.0f}, {1.0f, 0.0f}},
+            {{1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+            {{-1.0f, 1.0f, 1.0f}, {0.0f, 0.1f}},
         };
 
         std::vector<uint16_t> indices = {
@@ -35,9 +37,17 @@ namespace Kanji {
             4, 5, 0, 0, 5, 1
         };
 
-        Mesh mesh1 = renderer.meshLoad(vertices, indices);
+        Mesh mesh1;
 
+        auto load = [&]() {
+            mesh1 = renderer.meshLoad(vertices, indices);
+        };
+
+
+        load();
         Kanji::MeshInstance* instance = renderer.meshInstanceCreate(mesh1);
+
+
 
         double delta = 0.0;
         float angle = 0.0;
@@ -52,6 +62,9 @@ namespace Kanji {
             * mat4::translate(vec3{0.0, 0.0, 5.0})
             * mat4::rotationY(0.5*angle) * mat4::rotationZ(2.0 * angle) * mat4::rotationX(angle) ;
             delta = Time::now() - startTime;
+            char title[64];
+            sprintf(title, "%lf FPS", round( 1.0 / delta));
+            window.setTitle(title);
         }
 
     }

@@ -8,6 +8,7 @@ namespace Kanji {
         // create mesh & meshinstance allocators
         meshInfos.init(1024);
         meshInstances.init(1024);
+        textureInfos.init(1024);
     }
 
     // load mesh from list of verticies and indices
@@ -52,6 +53,43 @@ namespace Kanji {
         meshInstance->transform = mat4::identity();
         //return mesh isntance
         return meshInstance;
+    }
+
+    //textures
+    //texture load from image
+    Texture Renderer::textureImageLoad(Image image) {
+        //copy iamge data to image buffer
+        vcontext->imageBuffer.push(image.data, 4 * image.width * image.height);
+        //texture info
+        TextureInfo textureInfo;
+        textureInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+        //image create
+        vcontext->imageCreate(&textureInfo);
+        //image layout transition to transfer from buffer to image
+        vcontext->imageLayoutTransition(&textureInfo, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        //image buffer
+        vcontext->imageCopyBufferToImage(&textureInfo);
+        //image layout transition to shader read only
+        vcontext->imageLayoutTransition(&textureInfo, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        // image buffer clear
+        vcontext->imageBuffer.clear();
+        // image view craete
+        textureInfo.imageView = vcontext->imageViewCreate(textureInfo.image, textureInfo.format);
+        // image sampler create
+        vcontext->imageSamplerCreate(&textureInfo);
+        //allocate texture
+        Texture texture = textureInfos.alloc();
+        *textureInfos.get(texture) = textureInfo;
+        //return texture
+        return texture;
+    }
+
+    //texture free
+    void Renderer::textureFree(Texture texture) {
+        TextureInfo* textureInfo = textureInfos.get(texture);
+        vcontext->imageSamplerDestroy(textureInfo);
+        vcontext->imageViewDestroy(textureInfo->imageView);
+        vcontext->imageDestroy(textureInfo);
     }
 
     // draw frame

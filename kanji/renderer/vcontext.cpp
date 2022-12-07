@@ -59,7 +59,6 @@ namespace Kanji {
     //pick graphics card (physical device) to use
     void VContext::devicePickPhysicalDevice() {
         vdevice.physicalDevice = VK_NULL_HANDLE;
-
         //listing physical devices
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -315,34 +314,14 @@ namespace Kanji {
         imageViews.resize(vswapChain.swapChainImages.size());
 
         for (size_t i = 0; i < vswapChain.swapChainImages.size(); i++) {
-            VkImageViewCreateInfo createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.image = vswapChain.swapChainImages[i];
-
-            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format = vswapChain.swapChainImageFormat;
-
-            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel = 0;
-            createInfo.subresourceRange.levelCount = 1;
-            createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount = 1;
-
-            if (vkCreateImageView(vdevice.device, &createInfo, nullptr, &imageViews[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create image views!");
-            }
+            imageViews[i] = imageViewCreate(vswapChain.swapChainImages[i], vswapChain.swapChainImageFormat);
         }
     }
 
     // destroy image views
     void VContext::imageViewDestroy() {
         for (auto imageView : imageViews) {
-            vkDestroyImageView(vdevice.device, imageView, nullptr);
+            imageViewDestroy(imageView);
         }
     }
 
@@ -374,7 +353,6 @@ namespace Kanji {
         // read fragment shader file
         std::vector fragShaderCode = readFile(fragFilePath);
         std::cout << "fragment shader file size :" << fragShaderCode.size() << std::endl;
-
         // create shader modules
         VkShaderModule vertShaderModule = pipelineCreateShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = pipelineCreateShaderModule(fragShaderCode);
@@ -398,7 +376,7 @@ namespace Kanji {
         dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
         dynamicState.dynamicStateCount = static_cast<uint32_t>(vpipeline.dynamicStates.size());
         dynamicState.pDynamicStates = vpipeline.dynamicStates.data();
-
+        
         //vertex input (now)
         // get vertex descritoion
         auto bindingDescription = Vertex::getBindingDescription();
@@ -503,11 +481,12 @@ namespace Kanji {
         pipelineInfo.pMultisampleState = &multisampling;
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.pDynamicState = &dynamicState;
+    
 
         pipelineInfo.layout = vpipeline.layout;
 
         pipelineInfo.renderPass = renderPass;
-        pipelineInfo.subpass = 0;
+        pipelineInfo.subpass = 0;   
 
         if (vkCreateGraphicsPipelines(vdevice.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &(vpipeline.graphics)) != VK_SUCCESS) {
             throw std::runtime_error("failed to create graphics pipeline!");
@@ -515,6 +494,7 @@ namespace Kanji {
 
         vkDestroyShaderModule(vdevice.device, fragShaderModule, nullptr);
         vkDestroyShaderModule(vdevice.device, vertShaderModule, nullptr);
+        
     }
 
     //create shader modules
@@ -712,6 +692,40 @@ namespace Kanji {
         }
     }
 
+    // signle time commands
+    VkCommandBuffer VContext::singleTimeCommandsBegin() {
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandPool = commandPool;
+        allocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer singleTimeCommandBuffer;
+        vkAllocateCommandBuffers(vdevice.device, &allocInfo, &singleTimeCommandBuffer);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(singleTimeCommandBuffer, &beginInfo);
+
+        return singleTimeCommandBuffer;
+    }
+
+    void VContext::singleTimeCommandsEnd(VkCommandBuffer singleTimeCommandBuffer) {
+        vkEndCommandBuffer(singleTimeCommandBuffer);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &singleTimeCommandBuffer;
+
+        vkQueueSubmit(vdevice.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(vdevice.graphicsQueue);
+
+        vkFreeCommandBuffers(vdevice.device, commandPool, 1, &singleTimeCommandBuffer);
+    }
+
     // vulkan sync objects
     // create vulkan sync objects
     void VContext::syncObjectsCreate() {
@@ -809,6 +823,211 @@ namespace Kanji {
         vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, meshInfo.indexBufferIndex, VK_INDEX_TYPE_UINT16);
     }
 
+    //image
+    //image create
+    void VContext::imageCreate(TextureInfo* textureInfo) {
+        //image create info
+        VkImageCreateInfo imageInfo{};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.extent.width = textureInfo->width;
+        imageInfo.extent.height = textureInfo->height;
+        imageInfo.extent.depth = 1;
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = 1;
+        imageInfo.format = textureInfo->format; //image format (let's go with 4 bytes RGBA)
+        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+
+
+        //create the image
+        if (vkCreateImage(vdevice.device, &imageInfo, nullptr, &(textureInfo->image)) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create image!");
+        }
+
+        //allocate memory for the image
+        //get memory requirements
+        VkMemoryRequirements memRequirements;
+        vkGetImageMemoryRequirements(vdevice.device, textureInfo->image, &memRequirements);
+
+        //memory allocate info
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = Buffer::findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vdevice);
+        //memort allocate
+        if (vkAllocateMemory(vdevice.device, &allocInfo, nullptr, &(textureInfo->imageMemory)) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate image memory!");
+        }
+        //bind image to memroy
+        vkBindImageMemory(vdevice.device, textureInfo->image, textureInfo->imageMemory, 0);
+
+    }
+
+    //image layout transition between different layouts
+    void VContext::imageLayoutTransition(TextureInfo* textureInfo, VkImageLayout oldLayout, VkImageLayout newLayout) {
+        // start single time command buffer
+        VkCommandBuffer singleTimeCommandBuffer = singleTimeCommandsBegin();
+        //create image memory barrier
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = oldLayout;
+        barrier.newLayout = newLayout;
+        // ignore family queue
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        //image info
+        barrier.image = textureInfo->image;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+        //access masks
+        VkPipelineStageFlags sourceStage;
+        VkPipelineStageFlags destinationStage;
+
+        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        } 
+        else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        } 
+        else {
+            throw std::invalid_argument("unsupported layout transition!");
+        }
+
+        //submit pipeline barrier
+        vkCmdPipelineBarrier(singleTimeCommandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 0, &barrier);
+        //end command buffer
+        singleTimeCommandsEnd(singleTimeCommandBuffer);
+    }
+
+    //create image view
+    VkImageView VContext::imageViewCreate(VkImage image, VkFormat format) {
+        VkImageView imageView;
+        //image view create info
+        VkImageViewCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.image = image;
+
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = format;
+
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        if (vkCreateImageView(vdevice.device, &createInfo, nullptr, &imageView) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create image views!");
+        }
+
+        return imageView;
+
+    }
+
+    //destroy image view
+    void VContext::imageViewDestroy(VkImageView imageView) {
+        vkDestroyImageView(vdevice.device, imageView, nullptr);
+    }
+
+    //copy data from image buffer to image
+    void VContext::imageCopyBufferToImage(TextureInfo* textureInfo) {
+        // start single time command buffer
+        VkCommandBuffer singleTimeCommandBuffer = singleTimeCommandsBegin();
+        //specifie image region
+        VkBufferImageCopy region{};
+        region.bufferOffset = 0;
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+
+        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel = 0;
+        region.imageSubresource.baseArrayLayer = 0;
+        region.imageSubresource.layerCount = 1;
+
+        region.imageOffset = {0, 0, 0};
+        region.imageExtent = {
+            textureInfo->width,
+            textureInfo->height,
+            1
+        };
+
+        //exeute copy command from buffer to image
+        vkCmdCopyBufferToImage(
+            singleTimeCommandBuffer,
+            imageBuffer.buffer,
+            textureInfo->image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1,
+            &region
+        );
+
+        //end command buffer
+        singleTimeCommandsEnd(singleTimeCommandBuffer);
+    }
+
+    //destroy image
+    void VContext::imageDestroy(TextureInfo* textureInfo) {
+        vkDestroyImage(vdevice.device, textureInfo->image, nullptr);
+        vkFreeMemory(vdevice.device, textureInfo->imageMemory, nullptr);
+    }
+
+    //image sampler
+    void VContext::imageSamplerCreate(TextureInfo* textureInfo) {
+        //sampler create info
+        VkSamplerCreateInfo samplerInfo{};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        //filter for near and far texels
+        samplerInfo.magFilter = VK_FILTER_NEAREST;
+        samplerInfo.minFilter = VK_FILTER_LINEAR;
+        //adressing mode
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        //get physical device properties
+        VkPhysicalDeviceProperties properties{};
+        vkGetPhysicalDeviceProperties(vdevice.physicalDevice, &properties);
+        //set antistropy
+        samplerInfo.anisotropyEnable = VK_TRUE;
+        samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+        //outsite texture color when nothing
+        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        //use normalised cordinates
+        samplerInfo.unnormalizedCoordinates = VK_FALSE;
+        //comp (later!!!)
+        samplerInfo.compareEnable = VK_FALSE;
+        samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+        //minimap (later!!!)
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        samplerInfo.mipLodBias = 0.0f;
+        samplerInfo.minLod = 0.0f;
+        samplerInfo.maxLod = 0.0f;
+        //create the sampler
+        if (vkCreateSampler(vdevice.device, &samplerInfo, nullptr, &(textureInfo->sampler)) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create texture sampler!");
+        }
+        
+    }
+
+    //destroy image sampler
+    void VContext::imageSamplerDestroy(TextureInfo* textureInfo) {
+        vkDestroySampler(vdevice.device, textureInfo->sampler, nullptr);
+    }
+
 
     //init vulkan app
     void VContext::init(Window* _window) {
@@ -833,6 +1052,8 @@ namespace Kanji {
         vertexBuffer.create(&vdevice, VERTEX_BUFFER_SIZE);
         // create index buffer
         indexBuffer.create(&vdevice, INDEX_BUFFER_SIZE);
+        // create image buffer
+        imageBuffer.create(&vdevice, IMAGE_BUFFER_SIZE);
         // create command buffer
         commandBufferCreate();
         // create sync objects
@@ -847,6 +1068,7 @@ namespace Kanji {
         // destroy buffers
         vertexBuffer.destroy();
         indexBuffer.destroy();
+        imageBuffer.destroy();
         commandPoolDestroy();
         frameBufferDestroy();
         // destroy vulkan pipeline

@@ -14,4 +14,4 @@ compileshaders: kanji/renderer/shaders/main.vert kanji/renderer/shaders/main.fra
 	glslc kanji/renderer/shaders/main.frag -o build/shaders/main.frag.spv
 
 clean: 
-	rm build/output
+	rm build/build.out

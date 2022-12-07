@@ -12,7 +12,7 @@ namespace Kanji {
     // vertex definition 
     typedef struct Vertex {
         vec3 position;
-        vec3 color;
+        vec2 uv;
         // binding description
         static VkVertexInputBindingDescription getBindingDescription();
         //attribute descriptions

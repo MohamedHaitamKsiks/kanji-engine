@@ -2,6 +2,7 @@
 
 #include "core/math/math.h"
 
+
 namespace Kanji {
 
     typedef unsigned int Mesh;

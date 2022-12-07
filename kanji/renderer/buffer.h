@@ -15,6 +15,9 @@ namespace Kanji {
 
     class Buffer {
 
+        private:
+            void* data;
+
         public:
             // vdevice
             VDevice* vdevice;
@@ -26,7 +29,7 @@ namespace Kanji {
             uint16_t head = 0;
 
             //buffer methods
-            uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+            static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VDevice* vdevice);
             void create(VDevice* _vdevice, size_t bufferSize);
             void destroy();
             void push(const void* bufferData, const size_t size);

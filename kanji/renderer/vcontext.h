@@ -17,12 +17,15 @@
 #include "core/memory/allocator.h"
 #include "core/time/time.h"
 #include "mesh/mesh.h"
+#include "image/image.h"
+#include "image/texture.h"
 #include "window.h"
 #include "buffer.h"
 #include "vdevice.h"
 
 #define VERTEX_BUFFER_SIZE UINT16_MAX
 #define INDEX_BUFFER_SIZE UINT16_MAX
+#define IMAGE_BUFFER_SIZE UINT32_MAX
 
 // vulkan cotnext to use trhe vulkan api
 namespace Kanji {
@@ -60,6 +63,8 @@ namespace Kanji {
             Buffer vertexBuffer;
             //index buffer
             Buffer indexBuffer;
+            //image buffer
+            Buffer imageBuffer;
 
             // draw frame funcitons
             // draw frame start 
@@ -70,12 +75,30 @@ namespace Kanji {
             // command buffer start / end record
             void commandBufferStartRecord(uint32_t imageIndex);
             void commandBufferEndRecord();
-            
+
             //mesh
             void meshDraw(MeshInfo meshInfo, PushConstant* pushConstant);
             void meshBind(MeshInfo meshInfo);
 
-            
+            //image
+            void imageCreate(TextureInfo* textureInfo);
+            void imageDestroy(TextureInfo* textureInfo);
+
+            //image layout transition
+            void imageLayoutTransition(TextureInfo* textureInfo, VkImageLayout oldLayout, VkImageLayout newLayout);
+            //copy buffer to layout
+            void imageCopyBufferToImage(TextureInfo* textureInfo);
+
+            //create/destroy image view
+            VkImageView imageViewCreate(VkImage image, VkFormat format);
+            void imageViewDestroy(VkImageView imageView);
+
+            //iamge sampler
+            void imageSamplerCreate(TextureInfo* textureInfo);
+            void imageSamplerDestroy(TextureInfo* textureInfo);
+
+            //uniform buffers
+
         private:
             // window
             Window* window;
@@ -146,6 +169,10 @@ namespace Kanji {
             VkCommandBuffer commandBuffer;
             void commandBufferCreate();
 
+            //single time command
+            VkCommandBuffer singleTimeCommandsBegin();
+            void singleTimeCommandsEnd(VkCommandBuffer singleTimeCommandBuffer);
+
             // vulkan sync objects
             struct {
                 VkSemaphore imageAvailableSemaphore;
@@ -157,7 +184,11 @@ namespace Kanji {
             void syncObjectsCreate();
             void syncObjectsDestroy();
 
-
+            // uniform buffer
+            void unifromBufferDescriptorSetLayoutCreate();
+            void uniformBufferCreate();
+            void uniformBufferDescriptorPoolCreate();
+            void uniformBufferDescriptorSetsCreate();
 
     };
 

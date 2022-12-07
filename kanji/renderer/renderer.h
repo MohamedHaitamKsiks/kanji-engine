@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include "mesh/mesh.h"
 #include "vcontext.h"
+#include "image/image.h"
+#include "image/texture.h"
 #include "core/memory/allocator.h"
 
 namespace Kanji {
@@ -22,6 +24,11 @@ namespace Kanji {
             // draw frame
             void drawFrame();
 
+            //texture
+            Texture textureImageLoad(Image image);
+            void textureFree(Texture texture);
+
+
         private:
             //vcontext
             VContext* vcontext;
@@ -29,6 +36,8 @@ namespace Kanji {
             PoolAllocator<MeshInfo> meshInfos;
             // mesh instances
             PoolAllocator<MeshInstance> meshInstances;
+            // textures
+            PoolAllocator<TextureInfo> textureInfos;
     };
 
 }
