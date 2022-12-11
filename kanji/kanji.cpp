@@ -37,17 +37,24 @@ namespace Kanji {
             4, 5, 0, 0, 5, 1
         };
 
-        Mesh mesh1;
+        Mesh mesh1, mesh2;
 
-        auto load = [&]() {
-            mesh1 = renderer.meshLoad(vertices, indices);
-        };
-
-
-        load();
-        Kanji::MeshInstance* instance = renderer.meshInstanceCreate(mesh1);
+        mesh1 = renderer.meshLoad(vertices, indices);
+        mesh2 = renderer.meshLoad(vertices, indices);
 
 
+        //craete material
+        Material material = renderer.materialCreate(
+            "shaders/mat.vert.spv",
+            "shaders/mat.frag.spv"
+        );
+        renderer.meshSetMaterial(mesh1, material);
+
+        MeshInstance* instance = renderer.meshInstanceCreate(mesh1);
+
+        MeshInstance* instance2 = renderer.meshInstanceCreate(mesh2);
+        float s = 1.0f;
+        instance2->transform = mat4::ortho(-s, s, 1.0, s, -s, 10.0) * mat4::perspective(1.0, 5.0) * mat4::translate(vec3{5.0, 0.0, 5.0});
 
         double delta = 0.0;
         float angle = 0.0;
@@ -57,7 +64,7 @@ namespace Kanji {
             glfwPollEvents();
             renderer.drawFrame();
             angle += 10.0 * delta;
-            float s = 1.0f;
+            
             instance->transform = mat4::ortho(-s, s, 1.0, s, -s, 10.0) * mat4::perspective(1.0, 5.0)
             * mat4::translate(vec3{0.0, 0.0, 5.0})
             * mat4::rotationY(0.5*angle) * mat4::rotationZ(2.0 * angle) * mat4::rotationX(angle) ;

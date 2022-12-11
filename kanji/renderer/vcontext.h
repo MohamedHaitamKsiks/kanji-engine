@@ -22,6 +22,7 @@
 #include "window.h"
 #include "buffer.h"
 #include "vdevice.h"
+#include "pipeline.h"
 
 #define VERTEX_BUFFER_SIZE UINT16_MAX
 #define INDEX_BUFFER_SIZE UINT16_MAX
@@ -49,7 +50,6 @@ namespace Kanji {
         mat4 transform;
     };
 
-
     class VContext {
 
         public:
@@ -76,8 +76,13 @@ namespace Kanji {
             void commandBufferStartRecord(uint32_t imageIndex);
             void commandBufferEndRecord();
 
+            //pipeline
+            Pipeline pipelineCreate(const std::string& vertFilePath, const std::string& fragFilePath);
+            void pipelineDestroy(Pipeline pipeline);
+            void pipelineBind(Pipeline pipeline);
+
             //mesh
-            void meshDraw(MeshInfo meshInfo, PushConstant* pushConstant);
+            void meshDraw(MeshInfo meshInfo, PushConstant* pushConstant, Pipeline pipeline);
             void meshBind(MeshInfo meshInfo);
 
             //image
@@ -138,20 +143,8 @@ namespace Kanji {
             void imageViewsCreate();
             void imageViewDestroy();
 
-            // vulkan pipeline
-            struct {
-                VkPipelineLayout layout;
-                VkPipeline graphics;
-                std::vector<VkDynamicState> dynamicStates = {
-                    VK_DYNAMIC_STATE_VIEWPORT,
-                    VK_DYNAMIC_STATE_SCISSOR
-                };
-            } vpipeline;
             std::vector<char> readFile(const std::string& filePath);
             VkShaderModule pipelineCreateShaderModule(const std::vector<char>& code);
-            void pipelineCreate(const std::string& vertFilePath, const std::string& fragFilePath);
-            void pipelineDestroy();
-
             // vulkan render pass
             VkRenderPass renderPass;
             void renderPassCreate();
@@ -183,12 +176,6 @@ namespace Kanji {
             // sync objects methods
             void syncObjectsCreate();
             void syncObjectsDestroy();
-
-            // uniform buffer
-            void unifromBufferDescriptorSetLayoutCreate();
-            void uniformBufferCreate();
-            void uniformBufferDescriptorPoolCreate();
-            void uniformBufferDescriptorSetsCreate();
 
     };
 

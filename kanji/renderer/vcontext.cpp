@@ -346,7 +346,8 @@ namespace Kanji {
 
 
     // vulkan create pipeline
-    void VContext::pipelineCreate(const std::string& vertFilePath, const std::string& fragFilePath){
+    Pipeline VContext::pipelineCreate(const std::string& vertFilePath, const std::string& fragFilePath){
+        Pipeline pipeline;  
         // read vertex shader file
         std::vector vertShaderCode = readFile(vertFilePath);
         std::cout << "vertex shader file size :" << vertShaderCode.size() << std::endl;
@@ -356,12 +357,14 @@ namespace Kanji {
         // create shader modules
         VkShaderModule vertShaderModule = pipelineCreateShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = pipelineCreateShaderModule(fragShaderCode);
+        
 
         VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
         vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
         vertShaderStageInfo.module = vertShaderModule;
         vertShaderStageInfo.pName = "main";
+        
 
         VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
         fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -374,8 +377,8 @@ namespace Kanji {
         //dynamic states
         VkPipelineDynamicStateCreateInfo dynamicState{};
         dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamicState.dynamicStateCount = static_cast<uint32_t>(vpipeline.dynamicStates.size());
-        dynamicState.pDynamicStates = vpipeline.dynamicStates.data();
+        dynamicState.dynamicStateCount = static_cast<uint32_t>(pipeline.dynamicStates.size());
+        dynamicState.pDynamicStates = pipeline.dynamicStates.data();
         
         //vertex input (now)
         // get vertex descritoion
@@ -461,12 +464,10 @@ namespace Kanji {
         pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
         pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-        if (vkCreatePipelineLayout(vdevice.device, &pipelineLayoutInfo, nullptr, &(vpipeline.layout)) != VK_SUCCESS) {
+        
+        if (vkCreatePipelineLayout(vdevice.device, &pipelineLayoutInfo, nullptr, &(pipeline.layout)) != VK_SUCCESS) {
             throw std::runtime_error("failed to create pipeline layout!");
         };  
-
-        // create render pass
-        renderPassCreate();
 
         //create the graphics pipeline
         VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -483,18 +484,19 @@ namespace Kanji {
         pipelineInfo.pDynamicState = &dynamicState;
     
 
-        pipelineInfo.layout = vpipeline.layout;
+        pipelineInfo.layout = pipeline.layout;
 
         pipelineInfo.renderPass = renderPass;
         pipelineInfo.subpass = 0;   
 
-        if (vkCreateGraphicsPipelines(vdevice.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &(vpipeline.graphics)) != VK_SUCCESS) {
+        if (vkCreateGraphicsPipelines(vdevice.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &(pipeline.graphics)) != VK_SUCCESS) {
             throw std::runtime_error("failed to create graphics pipeline!");
         }
 
         vkDestroyShaderModule(vdevice.device, fragShaderModule, nullptr);
         vkDestroyShaderModule(vdevice.device, vertShaderModule, nullptr);
         
+        return pipeline;
     }
 
     //create shader modules
@@ -510,6 +512,12 @@ namespace Kanji {
         }
 
         return shaderModule;
+    }
+
+    // bind pipeline to command buffer
+    void VContext::pipelineBind(Pipeline pipeline) {
+        //bind pipeline
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphics);
     }
 
     //create render pass
@@ -568,7 +576,7 @@ namespace Kanji {
     }
 
     // vulkan destroy pipeline
-    void VContext::pipelineDestroy() {
+    void VContext::pipelineDestroy(Pipeline pipeline) {
         // nothing for now
     }
 
@@ -664,8 +672,6 @@ namespace Kanji {
 
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);      
 
-        //bind pipeline
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vpipeline.graphics);
 
         VkViewport viewport{};
         viewport.x = 0.0f;
@@ -807,8 +813,8 @@ namespace Kanji {
     }
 
     // mesh draw
-    void VContext::meshDraw(MeshInfo meshInfo, PushConstant* pushConstant) {
-        vkCmdPushConstants(commandBuffer, vpipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), pushConstant);
+    void VContext::meshDraw(MeshInfo meshInfo, PushConstant* pushConstant, Pipeline pipeline) {
+        vkCmdPushConstants(commandBuffer, pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), pushConstant);
         vkCmdDrawIndexed(commandBuffer, meshInfo.indexBufferSize, 1, 0, 0, 0);
     }
 
@@ -1043,8 +1049,8 @@ namespace Kanji {
         swapChainCreate();
         // create image views
         imageViewsCreate();
-        // create vulkan pipeline
-        pipelineCreate("./shaders/main.vert.spv", "./shaders/main.frag.spv");
+        // create render pass
+        renderPassCreate();
         // create buffers
         frameBuffersCreate();
         commandPoolCreate();
@@ -1071,8 +1077,6 @@ namespace Kanji {
         imageBuffer.destroy();
         commandPoolDestroy();
         frameBufferDestroy();
-        // destroy vulkan pipeline
-        pipelineDestroy();
         // destroy image views
         imageViewDestroy();
         // destroy swap chain

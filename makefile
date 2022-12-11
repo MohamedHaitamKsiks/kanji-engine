@@ -13,5 +13,8 @@ compileshaders: kanji/renderer/shaders/main.vert kanji/renderer/shaders/main.fra
 	glslc kanji/renderer/shaders/main.vert -o build/shaders/main.vert.spv
 	glslc kanji/renderer/shaders/main.frag -o build/shaders/main.frag.spv
 
+	glslc source/mat.vert -o build/shaders/mat.vert.spv
+	glslc source/mat.frag -o build/shaders/mat.frag.spv
+
 clean: 
 	rm build/build.out

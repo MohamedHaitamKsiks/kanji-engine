@@ -8,7 +8,30 @@ namespace Kanji {
         // create mesh & meshinstance allocators
         meshInfos.init(1024);
         meshInstances.init(1024);
+        materialInfos.init(1024);
         textureInfos.init(1024);
+        //create default material
+        materialCreate(
+            "shaders/main.vert.spv", 
+            "shaders/main.frag.spv"
+        );
+    }
+
+    //material
+    //material create
+    Material Renderer::materialCreate(const std::string &vert,const std::string &frag) {
+        //create material info
+        MaterialInfo materialInfo;
+        materialInfo.pipeline = vcontext->pipelineCreate(vert, frag);
+        //allocate material
+        Material material = materialInfos.alloc();
+        //set material
+        (*materialInfos.get(material)) = materialInfo;
+        return material;
+    }
+    // material free
+    void Renderer::materialFree(Material material) {
+        materialInfos.free(material);
     }
 
     // load mesh from list of verticies and indices
@@ -19,7 +42,7 @@ namespace Kanji {
         meshInfo.indexBufferIndex = vcontext->indexBuffer.head;
         meshInfo.vertexBufferSize = vertices.size() * sizeof(Vertex);
         meshInfo.indexBufferSize = indices.size() * sizeof(uint16_t);
-
+        meshInfo.material = MATERIAL_DEFAULT;
         // push data to the buffers
         vcontext->vertexBuffer.push(vertices.data(), meshInfo.vertexBufferSize);
         vcontext->indexBuffer.push(indices.data(), meshInfo.indexBufferSize);
@@ -53,6 +76,17 @@ namespace Kanji {
         meshInstance->transform = mat4::identity();
         //return mesh isntance
         return meshInstance;
+    }
+
+    //mesh material set / get
+    void Renderer::meshSetMaterial(Mesh mesh, Material material) {
+        MeshInfo* meshInfo = meshInfos.get(mesh);
+        meshInfo->material = material;
+    }
+    
+    Material Renderer::meshGetMaterial(Mesh mesh) {
+        MeshInfo* meshInfo = meshInfos.get(mesh);
+        return meshInfo->material;
     }
 
     //textures
@@ -107,11 +141,15 @@ namespace Kanji {
             if (meshInstances.isUsed(i)) {
                 MeshInstance* instance = meshInstances.get(i);
                 MeshInfo meshInfo = *meshInfos.get(instance->mesh);
+                MaterialInfo materialInfo = *materialInfos.get(meshInfo.material);
+
                 PushConstant pushConstant = PushConstant{
                     instance->transform
                 };
+                
+                vcontext->pipelineBind(materialInfo.pipeline);
                 vcontext->meshBind(meshInfo);
-                vcontext->meshDraw(meshInfo, &pushConstant);
+                vcontext->meshDraw(meshInfo, &pushConstant, materialInfo.pipeline);
             }
         }
 

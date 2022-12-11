@@ -19,8 +19,8 @@ void main() {
         for (int j = 0; j < 4; j++)
             transform[i][j] = push.transform[j][i];
     }
-    gl_Position =  transform * vec4(position, 1.0);
+    gl_Position =  transform * vec4(position + vec3(0.2, 0.0, 0.0), 1.0);
     
     //outColor = texture(textureSampler uv).rgb;
-    outColor = vec3(1.0, 1.0, 1.0);
+    outColor = vec3(uv, 0.0);
 }
