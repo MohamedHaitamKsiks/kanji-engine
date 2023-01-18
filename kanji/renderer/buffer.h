@@ -8,8 +8,10 @@
 
 #include "vdevice.h"
 
-/*When using the Kanji VkBuffer always:
-    1- push first the data that won't be deleted alot since the delete operation is slow
+/*
+    When using the Kanji VkBuffer always:
+    1- push first the data that won't be 
+    deleted alot since the delete operation is slow
 */
 namespace Kanji {
 

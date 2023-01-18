@@ -50,6 +50,8 @@ namespace Kanji {
             PoolAllocator<TextureInfo> textureInfos;
             //materials
             PoolAllocator<MaterialInfo> materialInfos;
+            //default material
+            
 
     };
 

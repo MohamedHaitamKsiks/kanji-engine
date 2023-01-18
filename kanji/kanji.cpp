@@ -20,7 +20,6 @@ namespace Kanji {
         std::vector<Vertex> vertices = {
             {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f}},
             {{1.0f, -1.0f, -1.0f}, {1.0f, 0.0f}},
-            {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f}},
             {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f}},
             {{-1.0f, -1.0f, 1.0f}, {0.0f, 0.0f}},
             {{1.0f, -1.0f, 1.0f}, {1.0f, 0.0f}},
@@ -44,11 +43,13 @@ namespace Kanji {
 
 
         //craete material
+        /*
         Material material = renderer.materialCreate(
             "shaders/mat.vert.spv",
             "shaders/mat.frag.spv"
         );
         renderer.meshSetMaterial(mesh1, material);
+        */
 
         MeshInstance* instance = renderer.meshInstanceCreate(mesh1);
 

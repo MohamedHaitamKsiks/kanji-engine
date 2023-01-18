@@ -22,5 +22,5 @@ void main() {
     gl_Position =  transform * vec4(position, 1.0);
     
     //outColor = texture(textureSampler uv).rgb;
-    outColor = vec3(1.0, 1.0, 1.0);
+    outColor = vec3(uv, 1.0);
 }
