@@ -1,5 +1,5 @@
-
 #version 450
+
 
 //get info from vertex buffer
 layout (location = 0) in vec3 position;

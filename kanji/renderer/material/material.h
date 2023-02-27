@@ -14,6 +14,9 @@ namespace Kanji {
 
     struct MaterialInfo {
         Pipeline pipeline;
+        VkDescriptorSetLayout layout;
+        ChunkId ubo;
+        size_t uboSize;
     };
 
 }
